@@ -5,10 +5,10 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys"
 import P from "pino"
 
-const owner = "2348056408043" // Nigerian Number, new owner
-let bannedUsers = [] // Store banned users temporarily
+const owner = "2348056408043"
+let bannedUsers = []
 
-async function startKellyBot() {
+async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState("auth_info")
   const { version } = await fetchLatestBaileysVersion()
 
@@ -22,21 +22,23 @@ async function startKellyBot() {
 
   sock.ev.on("connection.update", async (update) => {
     const { connection, lastDisconnect } = update
+
     if (connection === "close") {
       if (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut) {
-        startKellyBot()
+        startBot()
       }
     }
+
     if (connection === "open") {
-      console.log("✅ Kelly Bot Connected Successfully!")
+      console.log("✅ KELLY BOT CONNECTED SUCCESSFULLY!")
     }
 
-    // Print pairing code automatically
+    // 🔥 THIS MAKES PAIRING CODE SHOW IN RAILWAY LOGS
     if (!sock.authState.creds.registered) {
       const code = await sock.requestPairingCode(owner)
       console.log("\n🔥 KELLY BOT PAIRING CODE 🔥")
       console.log("👉 " + code)
-      console.log("Enter this code in WhatsApp → Linked Devices → Link with phone number\n")
+      console.log("Enter this in WhatsApp → Linked Devices → Link with phone number\n")
     }
   })
 
@@ -44,23 +46,28 @@ async function startKellyBot() {
     const m = messages[0]
     if (!m.message) return
 
-    const msg = m.message.conversation || m.message.extendedTextMessage?.text
-    if (!msg) return
+    const msg =
+      m.message.conversation ||
+      m.message.extendedTextMessage?.text ||
+      ""
 
     const from = m.key.remoteJid
     const sender = m.key.participant || from
     const isGroup = from.endsWith("@g.us")
-    const command = msg.toLowerCase()
+    const text = msg.toLowerCase()
 
-    // Ignore banned users
     if (bannedUsers.includes(sender)) return
 
     // ===== GENERAL =====
-    if (command === "ping") await sock.sendMessage(from, { text: "🏓 Pong!" })
-    if (command === "alive") await sock.sendMessage(from, { text: "🤖 Kelly Bot is Online and Stable 🚀" })
+    if (text === "ping")
+      await sock.sendMessage(from, { text: "🏓 Pong!" })
 
-    // ===== MENU =====
-    if (command === "menu") await sock.sendMessage(from, { text: `
+    if (text === "alive")
+      await sock.sendMessage(from, { text: "🤖 Kelly Bot is Alive & Running 🚀" })
+
+    if (text === "menu")
+      await sock.sendMessage(from, {
+        text: `
 🤖 *KELLY BOT MENU*
 
 ⚡ General
@@ -68,63 +75,81 @@ async function startKellyBot() {
 • alive
 • menu
 
-👥 Group Menu
+👥 Group
 • tagall
 • group open
 • group close
 
-🎉 Fun Menu
+🎉 Fun
 • joke
 • truth
 • dare
 
-🚫 Ban Menu (Owner Only)
-• ban [number]
-• unban [number]
-`})
+🚫 Owner
+• ban 234xxxxxxxxx
+• unban 234xxxxxxxxx
+`
+      })
 
     // ===== FUN =====
-    if (command === "joke") await sock.sendMessage(from, { text: "😂 Why did the bot cross the road? To connect to WhatsApp!" })
-    if (command === "truth") await sock.sendMessage(from, { text: "🤭 What’s your biggest secret?" })
-    if (command === "dare") await sock.sendMessage(from, { text: "🔥 I dare you to change your DP for 24 hours!" })
+    if (text === "joke")
+      await sock.sendMessage(from, {
+        text: "😂 Why did the bot cross the road? To connect to Railway!"
+      })
 
-    // ===== GROUP MENU =====
+    if (text === "truth")
+      await sock.sendMessage(from, {
+        text: "🤭 What is your biggest secret?"
+      })
+
+    if (text === "dare")
+      await sock.sendMessage(from, {
+        text: "🔥 I dare you to change your profile picture!"
+      })
+
+    // ===== GROUP COMMANDS =====
     if (isGroup) {
-      if (command === "tagall") {
+      if (text === "tagall") {
         const metadata = await sock.groupMetadata(from)
-        let text = "📢 Tagging Everyone:\n\n"
-        metadata.participants.forEach(p => text += `@${p.id.split("@")[0]}\n`)
-        await sock.sendMessage(from, { text, mentions: metadata.participants.map(p => p.id) })
+        let message = "📢 Tagging Everyone:\n\n"
+        metadata.participants.forEach(p => {
+          message += `@${p.id.split("@")[0]}\n`
+        })
+
+        await sock.sendMessage(from, {
+          text: message,
+          mentions: metadata.participants.map(p => p.id)
+        })
       }
-      if (command === "group open") {
+
+      if (text === "group open") {
         await sock.groupSettingUpdate(from, "not_announcement")
-        await sock.sendMessage(from, { text: "✅ Group Opened — Everyone can send messages" })
+        await sock.sendMessage(from, { text: "✅ Group Opened" })
       }
-      if (command === "group close") {
+
+      if (text === "group close") {
         await sock.groupSettingUpdate(from, "announcement")
-        await sock.sendMessage(from, { text: "🔒 Group Closed — Only admins can send messages" })
+        await sock.sendMessage(from, { text: "🔒 Group Closed" })
       }
     }
 
-    // ===== BAN MENU (OWNER ONLY) =====
+    // ===== OWNER ONLY =====
     if (sender.includes(owner)) {
-      if (command.startsWith("ban ")) {
-        const toBan = command.split(" ")[1]
-        if (toBan) {
-          bannedUsers.push(toBan + "@s.whatsapp.net")
-          await sock.sendMessage(from, { text: `🚫 User ${toBan} banned!` })
-        }
+      if (text.startsWith("ban ")) {
+        const number = text.split(" ")[1]
+        bannedUsers.push(number + "@s.whatsapp.net")
+        await sock.sendMessage(from, { text: "🚫 User banned!" })
       }
-      if (command.startsWith("unban ")) {
-        const toUnban = command.split(" ")[1]
-        if (toUnban) {
-          bannedUsers = bannedUsers.filter(u => u !== toUnban + "@s.whatsapp.net")
-          await sock.sendMessage(from, { text: `✅ User ${toUnban} unbanned!` })
-        }
+
+      if (text.startsWith("unban ")) {
+        const number = text.split(" ")[1]
+        bannedUsers = bannedUsers.filter(
+          u => u !== number + "@s.whatsapp.net"
+        )
+        await sock.sendMessage(from, { text: "✅ User unbanned!" })
       }
     }
-
   })
 }
 
-startKellyBot()
+startBot()
