@@ -5,8 +5,8 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys"
 import P from "pino"
 
-const owner = "233278104843" // Your Ghana Number
-let bannedUsers = [] // Store banned users
+const owner = "2348056408043" // Nigerian Number, new owner
+let bannedUsers = [] // Store banned users temporarily
 
 async function startKellyBot() {
   const { state, saveCreds } = await useMultiFileAuthState("auth_info")
@@ -31,6 +31,7 @@ async function startKellyBot() {
       console.log("✅ Kelly Bot Connected Successfully!")
     }
 
+    // Print pairing code automatically
     if (!sock.authState.creds.registered) {
       const code = await sock.requestPairingCode(owner)
       console.log("\n🔥 KELLY BOT PAIRING CODE 🔥")
@@ -78,8 +79,8 @@ async function startKellyBot() {
 • dare
 
 🚫 Ban Menu (Owner Only)
-• ban
-• unban
+• ban [number]
+• unban [number]
 `})
 
     // ===== FUN =====
